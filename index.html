@@ -1,0 +1,1691 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Woodcraft — Delivery Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-sA+e2A5XGOani3to5ydyTqgGP0zU2U8m+MQ/8tPCpHg=" crossorigin="" />
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --white: #ffffff;
+  --bg: #f7f7f5;
+  --bg2: #f0efe9;
+  --surface: #ffffff;
+  --border: #e8e6e0;
+  --border2: #d4d1c8;
+  --text: #1a1814;
+  --text2: #6b6760;
+  --text3: #9b9891;
+  --accent: #2a6049;
+  --accent-light: #edf5f0;
+  --accent2: #b5460f;
+  --accent2-light: #fdf0ea;
+  --amber: #c47d1a;
+  --amber-light: #fdf6e7;
+  --blue: #1a4a7a;
+  --blue-light: #eaf0f8;
+  --purple: #6b3fa0;
+  --purple-light: #f3eefb;
+  --radius: 12px;
+  --radius-sm: 8px;
+  --shadow: 0 1px 3px rgba(0,0,0,.06), 0 4px 12px rgba(0,0,0,.04);
+  --shadow-lg: 0 8px 32px rgba(0,0,0,.09);
+  --transition: 0.18s cubic-bezier(0.4,0,0.2,1);
+}
+
+body {
+  font-family: 'Outfit', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 99px; }
+
+/* ══════════════ LOGIN ══════════════ */
+#login-view {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg);
+  padding: 2rem 1rem;
+}
+.login-wrap {
+  width: 100%;
+  max-width: 420px;
+}
+.login-brand {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+.login-brand .mark {
+  width: 52px; height: 52px;
+  background: var(--accent);
+  border-radius: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  margin-bottom: 1rem;
+  box-shadow: 0 8px 24px rgba(42,96,73,.25);
+}
+.login-brand h1 {
+  font-family: 'DM Serif Display', serif;
+  font-size: 26px;
+  color: var(--text);
+  letter-spacing: -.3px;
+}
+.login-brand p {
+  font-size: 13px;
+  color: var(--text2);
+  margin-top: 4px;
+}
+.login-card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 2rem;
+  box-shadow: var(--shadow-lg);
+}
+.login-card h2 {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 1.5rem;
+  color: var(--text);
+}
+.field { margin-bottom: 1rem; }
+.field label {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--text2);
+  margin-bottom: 6px;
+}
+.field input, .field select {
+  width: 100%;
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  font-size: 14px;
+  font-family: 'Outfit', sans-serif;
+  color: var(--text);
+  background: var(--bg);
+  transition: border-color var(--transition), box-shadow var(--transition);
+  outline: none;
+  -webkit-appearance: none;
+}
+.field input:focus, .field select:focus {
+  border-color: var(--accent);
+  background: var(--white);
+  box-shadow: 0 0 0 3px rgba(42,96,73,.1);
+}
+.btn-primary {
+  width: 100%;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: 'Outfit', sans-serif;
+  cursor: pointer;
+  transition: background var(--transition), transform var(--transition), box-shadow var(--transition);
+  margin-top: .5rem;
+}
+.btn-primary:hover { background: #225039; transform: translateY(-1px); box-shadow: 0 6px 20px rgba(42,96,73,.25); }
+.btn-primary:active { transform: translateY(0); }
+.login-error { color: var(--accent2); font-size: 12px; margin-top: 10px; min-height: 18px; }
+.login-hint { font-size: 11.5px; color: var(--text3); text-align: center; margin-top: 1.25rem; line-height: 1.6; }
+.login-hint code { font-family: 'DM Mono', monospace; background: var(--bg2); padding: 1px 5px; border-radius: 4px; font-size: 11px; }
+
+/* ══════════════ APP SHELL ══════════════ */
+#app-view { display: none; min-height: 100vh; flex-direction: column; }
+#app-view.active { display: flex; }
+
+/* ── Topbar ── */
+.topbar {
+  background: var(--white);
+  border-bottom: 1px solid var(--border);
+  padding: 0 1.5rem;
+  height: 58px;
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  box-shadow: 0 1px 0 var(--border);
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+.brand-mark {
+  width: 34px; height: 34px;
+  background: var(--accent);
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+.brand-name {
+  font-family: 'DM Serif Display', serif;
+  font-size: 17px;
+  color: var(--text);
+  line-height: 1.1;
+}
+.brand-sub {
+  font-size: 10px;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+}
+
+/* Live indicator */
+.live-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11.5px;
+  color: var(--text2);
+  background: var(--accent-light);
+  border: 1px solid #c2ddd3;
+  border-radius: 99px;
+  padding: 4px 10px;
+  flex-shrink: 0;
+}
+.live-dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: pulse 2s ease-in-out infinite;
+}
+@keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(.8)} }
+
+.topbar-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.branch-pill {
+  font-size: 12px;
+  font-weight: 500;
+  padding: 5px 12px;
+  border-radius: 99px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  color: var(--text2);
+}
+.btn-logout {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 6px 12px;
+  font-size: 12px;
+  font-family: 'Outfit', sans-serif;
+  color: var(--text2);
+  cursor: pointer;
+  transition: all var(--transition);
+}
+.btn-logout:hover { border-color: var(--border2); color: var(--text); }
+.date-txt { font-size: 12px; color: var(--text3); white-space: nowrap; }
+
+/* ── Nav Tabs ── */
+.nav-row {
+  background: var(--white);
+  border-bottom: 1px solid var(--border);
+  padding: 0 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.nav-btn {
+  background: none;
+  border: none;
+  padding: 14px 16px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: 'Outfit', sans-serif;
+  color: var(--text3);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all var(--transition);
+  white-space: nowrap;
+}
+.nav-btn:hover { color: var(--text); }
+.nav-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+/* ── Content ── */
+.content { flex: 1; padding: 1.5rem; max-width: 1400px; width: 100%; margin: 0 auto; }
+.view { display: none; }
+.view.active { display: block; }
+
+/* ══════════════ WEBHOOK BANNER ══════════════ */
+.webhook-banner {
+  background: var(--white);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem 1.25rem;
+  margin-bottom: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+.webhook-banner .icon { font-size: 22px; flex-shrink: 0; }
+.webhook-info { flex: 1; min-width: 200px; }
+.webhook-info h3 { font-size: 13px; font-weight: 600; color: var(--text); }
+.webhook-info p { font-size: 12px; color: var(--text2); margin-top: 2px; }
+.webhook-url {
+  font-family: 'DM Mono', monospace;
+  font-size: 11.5px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 10px;
+  color: var(--text2);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 200px;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+.webhook-url:hover { border-color: var(--accent); background: var(--accent-light); }
+.webhook-url span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.copy-btn {
+  font-size: 11px;
+  font-family: 'Outfit', sans-serif;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 5px;
+  padding: 3px 8px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background var(--transition);
+}
+.copy-btn:hover { background: #225039; }
+.webhook-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 5px 12px;
+  border-radius: 99px;
+  flex-shrink: 0;
+}
+.ws-connected { background: var(--accent-light); color: var(--accent); border: 1px solid #c2ddd3; }
+.ws-disconnected { background: var(--accent2-light); color: var(--accent2); border: 1px solid #f2c7b0; }
+
+/* ══════════════ METRICS STRIP ══════════════ */
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 12px;
+  margin-bottom: 1.5rem;
+}
+.metric-card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.1rem 1.25rem;
+  position: relative;
+  overflow: hidden;
+  transition: box-shadow var(--transition);
+}
+.metric-card:hover { box-shadow: var(--shadow); }
+.metric-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  border-radius: 3px 3px 0 0;
+}
+.mc-total::before { background: var(--accent); }
+.mc-transit::before { background: var(--amber); }
+.mc-delivered::before { background: var(--blue); }
+.mc-pending::before { background: var(--accent2); }
+.mc-todos::before { background: var(--purple); }
+.metric-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--text3); margin-bottom: 8px; }
+.metric-val {
+  font-family: 'DM Serif Display', serif;
+  font-size: 36px;
+  line-height: 1;
+  color: var(--text);
+  transition: color .3s;
+}
+.metric-val.flash { animation: flashUp .5s ease; }
+@keyframes flashUp { 0%{color:var(--accent);transform:scale(1.1)} 100%{color:var(--text);transform:scale(1)} }
+.metric-tag { font-size: 11px; color: var(--text3); margin-top: 5px; }
+.metric-icon {
+  position: absolute;
+  right: 1rem; top: 50%;
+  transform: translateY(-50%);
+  font-size: 28px;
+  opacity: .08;
+}
+
+/* ══════════════ TOAST ══════════════ */
+#toast-container {
+  position: fixed;
+  top: 70px;
+  right: 1.5rem;
+  z-index: 999;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+}
+.toast {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  box-shadow: var(--shadow-lg);
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  pointer-events: all;
+  animation: slideIn .25s ease;
+  max-width: 320px;
+}
+.toast.status-update { border-left-color: var(--amber); }
+.toast.new-delivery { border-left-color: var(--accent); }
+@keyframes slideIn { from{transform:translateX(120%);opacity:0} to{transform:translateX(0);opacity:1} }
+@keyframes slideOut { from{transform:translateX(0);opacity:1} to{transform:translateX(120%);opacity:0} }
+.toast-icon { font-size: 18px; flex-shrink: 0; }
+.toast-body { flex: 1; }
+.toast-title { font-weight: 600; color: var(--text); }
+.toast-desc { font-size: 11.5px; color: var(--text2); margin-top: 1px; }
+
+/* ══════════════ BRANCH PANELS ══════════════ */
+.branches-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+.branch-card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  transition: box-shadow var(--transition);
+}
+.branch-card:hover { box-shadow: var(--shadow); }
+.branch-card.highlight { animation: highlightCard .6s ease; }
+@keyframes highlightCard { 0%{box-shadow:0 0 0 3px rgba(42,96,73,.3)} 100%{box-shadow:none} }
+.branch-head {
+  padding: .85rem 1rem;
+  display: flex;
+  align-items: center;
+  gap: .6rem;
+  border-bottom: 1px solid var(--border);
+}
+.branch-stripe { width: 4px; height: 34px; border-radius: 99px; flex-shrink: 0; }
+.branch-title { font-size: 14px; font-weight: 600; color: var(--text); }
+.branch-sub { font-size: 11px; color: var(--text3); }
+.branch-badge {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: 99px;
+}
+
+/* Delivery rows */
+.delivery-list { padding: .5rem 0; }
+.d-row {
+  display: flex;
+  align-items: flex-start;
+  gap: .75rem;
+  padding: .6rem 1rem;
+  transition: background var(--transition);
+  cursor: pointer;
+  border-bottom: 1px solid var(--border);
+  position: relative;
+}
+.d-row:last-child { border-bottom: none; }
+.d-row:hover { background: var(--bg); }
+.d-row.new-row { animation: rowFlash .8s ease; }
+@keyframes rowFlash { 0%{background:rgba(42,96,73,.12)} 100%{background:transparent} }
+.d-id { font-family: 'DM Mono', monospace; font-size: 10px; color: var(--text3); min-width: 34px; padding-top: 3px; }
+.d-body { flex: 1; min-width: 0; }
+.d-name { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.d-addr { font-size: 11px; color: var(--text3); margin-top: 6px; overflow: hidden; text-overflow: ellipsis; }
+.d-item { font-size: 12px; color: var(--text2); margin-top: 0; line-height: 1.4; }
+.d-right { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; flex-shrink: 0; }
+.status-pill {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 99px;
+  white-space: nowrap;
+  transition: background .3s, color .3s;
+}
+.sp-scheduled { background: var(--amber-light); color: var(--amber); }
+.sp-transit { background: var(--blue-light); color: var(--blue); }
+.sp-delivered { background: var(--accent-light); color: var(--accent); }
+.sp-pending { background: var(--accent2-light); color: var(--accent2); }
+.d-time { font-size: 10px; color: var(--text3); font-family: 'DM Mono', monospace; }
+.priority-dot { width: 6px; height: 6px; border-radius: 50%; margin-top: 2px; }
+.pr-high { background: var(--accent2); }
+.pr-med { background: var(--amber); }
+.pr-low { background: var(--accent); }
+
+/* Update status tag on d-row */
+.status-update-anim { animation: statusPulse .6s ease; }
+@keyframes statusPulse { 0%{opacity:0;transform:scale(.8)} 60%{opacity:1;transform:scale(1.08)} 100%{transform:scale(1)} }
+
+/* ══════════════ DELIVERIES TABLE VIEW ══════════════ */
+.table-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+.filter-btn {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 99px;
+  padding: 5px 14px;
+  font-size: 12px;
+  font-weight: 500;
+  font-family: 'Outfit', sans-serif;
+  color: var(--text2);
+  cursor: pointer;
+  transition: all var(--transition);
+}
+.filter-btn:hover { border-color: var(--border2); color: var(--text); }
+.filter-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn-add {
+  margin-left: auto;
+  background: var(--accent);
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 7px 16px;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: 'Outfit', sans-serif;
+  color: #fff;
+  cursor: pointer;
+  transition: background var(--transition);
+}
+.btn-add:hover { background: #225039; }
+.table-wrap {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+table { width: 100%; border-collapse: collapse; }
+thead th {
+  text-align: left;
+  padding: .7rem 1rem;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--text3);
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+}
+tbody tr { border-bottom: 1px solid var(--border); transition: background var(--transition); }
+tbody tr:last-child { border-bottom: none; }
+tbody tr:hover { background: var(--bg); }
+tbody tr.new-tr { animation: rowFlash .8s ease; }
+tbody td { padding: .65rem 1rem; font-size: 13px; color: var(--text); }
+tbody td.muted { color: var(--text2); }
+.action-select {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 4px 6px;
+  font-size: 11px;
+  font-family: 'Outfit', sans-serif;
+  color: var(--text);
+  background: var(--bg);
+  cursor: pointer;
+}
+.mark-btn {
+  background: var(--accent);
+  border: none;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 500;
+  font-family: 'Outfit', sans-serif;
+  color: #fff;
+  cursor: pointer;
+  transition: background var(--transition);
+}
+.mark-btn:hover { background: #225039; }
+
+/* ══════════════ TODO BOARD ══════════════ */
+.todo-header {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  margin-bottom: 1rem;
+}
+.todo-header h2 { font-size: 16px; font-weight: 600; }
+.todo-header p { font-size: 12px; color: var(--text3); }
+.todo-board {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+.todo-col {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: .85rem;
+  min-height: 280px;
+  transition: background .15s;
+}
+.todo-col.drag-over { background: var(--accent-light); border-color: var(--accent); }
+.tc-head {
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+  margin-bottom: .75rem;
+}
+.tc-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.tc-title { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--text2); }
+.tc-count {
+  font-size: 10px; font-weight: 600;
+  padding: 1px 6px; border-radius: 99px;
+  background: var(--border); color: var(--text3);
+  margin-left: auto;
+}
+.todo-card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: .65rem .75rem;
+  margin-bottom: 6px;
+  cursor: grab;
+  transition: box-shadow var(--transition), transform var(--transition);
+  user-select: none;
+}
+.todo-card:hover { box-shadow: var(--shadow); transform: translateY(-1px); }
+.todo-card.dragging { opacity: .45; transform: scale(.97); }
+.todo-card-done { opacity: .55; }
+.tc-row { display: flex; align-items: flex-start; gap: .45rem; }
+.check-box {
+  width: 15px; height: 15px;
+  border: 1.5px solid var(--border2);
+  border-radius: 4px;
+  flex-shrink: 0; margin-top: 2px;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer;
+  transition: all var(--transition);
+}
+.check-box.checked { background: var(--accent); border-color: var(--accent); }
+.tc-title-text { font-size: 12.5px; font-weight: 500; color: var(--text); }
+.tc-title-text.done { text-decoration: line-through; color: var(--text3); }
+.tc-meta { font-size: 11px; color: var(--text3); margin-top: 2px; }
+.tc-branch { font-size: 10px; font-weight: 600; padding: 2px 7px; border-radius: 99px; margin-top: 5px; display: inline-block; }
+.tcb-a { background: var(--accent-light); color: var(--accent); }
+.tcb-b { background: var(--blue-light); color: var(--blue); }
+.tcb-c { background: var(--purple-light); color: var(--purple); }
+.add-task-btn {
+  width: 100%; background: none; border: 1.5px dashed var(--border2);
+  border-radius: var(--radius-sm); padding: 7px; font-size: 12px;
+  font-family: 'Outfit', sans-serif; color: var(--text3);
+  cursor: pointer; transition: all var(--transition); margin-top: 4px;
+  display: flex; align-items: center; justify-content: center; gap: 5px;
+}
+.add-task-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
+
+/* ══════════════ WEBHOOK LOG ══════════════ */
+.webhook-section { margin-top: 1.5rem; }
+.section-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text2);
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  margin-bottom: .75rem;
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+}
+.section-title span { flex: 1; }
+.section-title small { font-size: 11px; font-weight: 400; text-transform: none; letter-spacing: 0; color: var(--text3); }
+.webhook-log {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  max-height: 280px;
+  overflow-y: auto;
+}
+.log-empty {
+  padding: 2rem;
+  text-align: center;
+  color: var(--text3);
+  font-size: 13px;
+}
+.log-row {
+  display: flex;
+  align-items: flex-start;
+  gap: .85rem;
+  padding: .7rem 1rem;
+  border-bottom: 1px solid var(--border);
+  animation: slideDown .25s ease;
+  transition: background var(--transition);
+}
+.log-row:last-child { border-bottom: none; }
+.log-row:hover { background: var(--bg); }
+@keyframes slideDown { from{opacity:0;transform:translateY(-8px)} to{opacity:1;transform:translateY(0)} }
+.log-type {
+  font-size: 9.5px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.lt-status { background: var(--amber-light); color: var(--amber); }
+.lt-new { background: var(--accent-light); color: var(--accent); }
+.lt-error { background: var(--accent2-light); color: var(--accent2); }
+.log-body { flex: 1; }
+.log-msg { font-size: 12.5px; color: var(--text); font-weight: 500; }
+.log-detail { font-size: 11px; color: var(--text3); margin-top: 1px; font-family: 'DM Mono', monospace; }
+.log-time { font-size: 11px; color: var(--text3); white-space: nowrap; font-family: 'DM Mono', monospace; }
+
+/* Test webhook controls */
+.test-controls {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.1rem 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+.test-label { font-size: 12px; font-weight: 600; color: var(--text2); }
+.test-btn {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 500;
+  font-family: 'Outfit', sans-serif;
+  color: var(--text);
+  cursor: pointer;
+  transition: all var(--transition);
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.test-btn:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-light); }
+.test-btn.transit { color: var(--amber); }
+.test-btn.transit:hover { border-color: var(--amber); background: var(--amber-light); }
+.test-btn.delivered { color: var(--blue); }
+.test-btn.delivered:hover { border-color: var(--blue); background: var(--blue-light); }
+
+/* ══════════════ MODAL ══════════════ */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(26,24,20,.45);
+  z-index: 100;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+}
+.modal-overlay.open { display: flex; }
+.modal {
+  background: var(--white);
+  border-radius: 16px;
+  padding: 1.5rem;
+  width: 100%;
+  max-width: 380px;
+  box-shadow: var(--shadow-lg);
+  animation: modalIn .2s ease;
+}
+@keyframes modalIn { from{opacity:0;transform:scale(.95)} to{opacity:1;transform:scale(1)} }
+.modal-title { font-size: 16px; font-weight: 600; margin-bottom: 1.25rem; }
+.modal-field { margin-bottom: .85rem; }
+.modal-field label { display: block; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--text2); margin-bottom: 5px; }
+.modal-field input, .modal-field select {
+  width: 100%; border: 1.5px solid var(--border); border-radius: var(--radius-sm);
+  padding: 8px 10px; font-size: 13px; font-family: 'Outfit', sans-serif;
+  color: var(--text); background: var(--bg); outline: none;
+  transition: border-color var(--transition);
+}
+.modal-field input:focus, .modal-field select:focus { border-color: var(--accent); background: var(--white); }
+.modal-btns { display: flex; gap: 8px; justify-content: flex-end; margin-top: 1rem; }
+.btn-cancel {
+  background: none; border: 1px solid var(--border); border-radius: var(--radius-sm);
+  padding: 8px 16px; font-size: 13px; font-family: 'Outfit', sans-serif;
+  color: var(--text2); cursor: pointer; transition: all var(--transition);
+}
+.btn-cancel:hover { border-color: var(--border2); color: var(--text); }
+.btn-save {
+  background: var(--accent); border: none; border-radius: var(--radius-sm);
+  padding: 8px 18px; font-size: 13px; font-weight: 600; font-family: 'Outfit', sans-serif;
+  color: #fff; cursor: pointer; transition: background var(--transition);
+}
+.btn-save:hover { background: #225039; }
+
+/* ══════════════ API DOCS ══════════════ */
+.api-card {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.25rem;
+  margin-bottom: 1rem;
+}
+.api-card h3 { font-size: 15px; font-weight: 600; margin-bottom: .3rem; }
+.api-card p { font-size: 13px; color: var(--text2); margin-bottom: 1rem; line-height: 1.6; }
+.api-endpoint {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  margin-bottom: .75rem;
+}
+.method-badge {
+  font-family: 'DM Mono', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+.mb-post { background: #fff0e5; color: #b5460f; }
+.mb-get { background: var(--blue-light); color: var(--blue); }
+.endpoint-url {
+  font-family: 'DM Mono', monospace;
+  font-size: 12px;
+  color: var(--text);
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+pre.code-block {
+  background: #1a1814;
+  color: #e8e4dc;
+  border-radius: var(--radius-sm);
+  padding: 1rem;
+  font-family: 'DM Mono', monospace;
+  font-size: 11.5px;
+  line-height: 1.7;
+  overflow-x: auto;
+  margin-top: .75rem;
+}
+pre.code-block .key { color: #8ecfb0; }
+pre.code-block .val { color: #f4c97e; }
+pre.code-block .str { color: #a8d8b9; }
+pre.code-block .cmt { color: #6b6760; font-style: italic; }
+
+.map-card { background: var(--white); border: 1px solid var(--border); border-radius: var(--radius); padding: 1.25rem; margin-bottom: 1rem; }
+.map-card h3 { margin-bottom: .5rem; }
+#tracking-map { height: 420px; min-height: 320px; border-radius: 14px; overflow: hidden; margin-top: 1rem; }
+.van-list { display: grid; gap: 10px; }
+.van-card { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 14px; background: var(--bg2); border: 1px solid var(--border); border-radius: var(--radius-sm); }
+.van-details { display: grid; gap: 4px; }
+.van-label { font-size: 13px; font-weight: 600; color: var(--text); }
+.van-status { font-size: 12px; color: var(--text3); }
+.van-badge { background: var(--accent-light); color: var(--accent); padding: 4px 10px; border-radius: 99px; font-size: 11px; font-weight: 700; }
+.admin-only { display: none; }
+
+/* ── Responsive ── */
+@media (max-width: 900px) {
+  .metrics-grid { grid-template-columns: repeat(3, 1fr); }
+  .branches-grid, .todo-board { grid-template-columns: 1fr; }
+  .topbar { padding: 0 1rem; gap: 1rem; }
+  .content { padding: 1rem; }
+  .brand-name, .brand-sub { display: none; }
+}
+@media (max-width: 600px) {
+  .metrics-grid { grid-template-columns: repeat(2, 1fr); }
+}
+</style>
+</head>
+<body>
+
+<!-- ══════════ LOGIN ══════════ -->
+<div id="login-view">
+  <div class="login-wrap">
+    <div class="login-brand">
+      <div class="mark">🪑</div>
+      <h1>MM Furniture & Electronics</h1>
+      <p>Delivery Management System</p>
+    </div>
+    <div class="login-card">
+      <h2>Sign in to your branch</h2>
+      <div class="field">
+        <label>Select Branch</label>
+        <select id="login-branch">
+          <option value="Branch A">Branch A — North Bengaluru</option>
+          <option value="Branch B">Branch B — East Bengaluru</option>
+          <option value="Admin">Admin — All Branches</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Username</label>
+        <input type="text" id="login-user" placeholder="Enter username" autocomplete="username">
+      </div>
+      <div class="field">
+        <label>Password</label>
+        <input type="password" id="login-pass" placeholder="Enter password" autocomplete="current-password">
+      </div>
+      <button class="btn-primary" onclick="handleLogin()">Sign In</button>
+      <div id="login-error" class="login-error"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ APP ══════════ -->
+<div id="app-view">
+  <!-- Topbar -->
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-mark">🪑</div>
+      <div>
+        <div class="brand-name">MM Furniture & Electronics</div>
+        <div class="brand-sub">Delivery Dashboard</div>
+      </div>
+    </div>
+    <div class="live-badge">
+      <div class="live-dot"></div>
+      <span id="live-label">Live</span>
+    </div>
+    <div class="topbar-right">
+      <div class="branch-pill" id="branch-pill">—</div>
+      <div class="date-txt" id="top-date">—</div>
+      <button class="btn-logout" onclick="logout()">Sign out</button>
+    </div>
+  </div>
+
+  <!-- Nav -->
+  <div class="nav-row">
+    <button class="nav-btn active" onclick="switchTab('dashboard', this)">Dashboard</button>
+    <button class="nav-btn" onclick="switchTab('deliveries', this)">Deliveries</button>
+    <button class="nav-btn" onclick="switchTab('todo', this)">To-Do Board</button>
+    <button id="nav-tracking-btn" class="nav-btn" onclick="switchTab('webhook', this)">GPS Tracking</button>
+  </div>
+
+  <!-- Toast container -->
+  <div id="toast-container"></div>
+
+  <!-- Content -->
+  <div class="content">
+
+    <!-- ── DASHBOARD ── -->
+    <div id="tab-dashboard" class="view active">
+      <!-- Webhook banner -->
+      <div class="webhook-banner">
+        <div class="icon">🔗</div>
+        <div class="webhook-info">
+          <h3>Billing Webhook Connected</h3>
+          <p>Your billing system pushes delivery events here. Status updates reflect live.</p>
+        </div>
+        <div class="webhook-url" onclick="copyWebhookUrl()">
+          <span id="webhook-display-url">https://woodcraft.local/api/webhook/billing</span>
+          <button class="copy-btn" id="copy-btn-main">Copy</button>
+        </div>
+        <div class="webhook-status ws-connected" id="webhook-status-badge">
+          <span>●</span> Connected
+        </div>
+      </div>
+
+      <!-- Metrics -->
+      <div class="metrics-grid">
+        <div class="metric-card mc-total">
+          <div class="metric-label">Today's Deliveries</div>
+          <div class="metric-val" id="m-total">0</div>
+          <div class="metric-tag" id="m-branch-tag">Loading...</div>
+          <div class="metric-icon">📦</div>
+        </div>
+        <div class="metric-card mc-transit">
+          <div class="metric-label">In Transit</div>
+          <div class="metric-val" id="m-transit">0</div>
+          <div class="metric-tag">On the road now</div>
+          <div class="metric-icon">🚚</div>
+        </div>
+        <div class="metric-card mc-delivered">
+          <div class="metric-label">Delivered</div>
+          <div class="metric-val" id="m-done">0</div>
+          <div class="metric-tag">Completed today</div>
+          <div class="metric-icon">✅</div>
+        </div>
+        <div class="metric-card mc-pending">
+          <div class="metric-label">Pending</div>
+          <div class="metric-val" id="m-pending">0</div>
+          <div class="metric-tag">Awaiting dispatch</div>
+          <div class="metric-icon">⏳</div>
+        </div>
+        <div class="metric-card mc-todos">
+          <div class="metric-label">Open To-Dos</div>
+          <div class="metric-val" id="m-todos">0</div>
+          <div class="metric-tag">Tasks pending</div>
+          <div class="metric-icon">📋</div>
+        </div>
+      </div>
+
+      <!-- Branch panels -->
+      <div class="branches-grid" id="branch-grid"></div>
+
+      <!-- Webhook log on dashboard -->
+      <div class="webhook-section">
+        <div class="section-title">
+          <span>Live Event Log</span>
+          <small>Updates pushed by your billing system</small>
+        </div>
+        <div class="webhook-log" id="wh-log-dashboard">
+          <div class="log-empty">No webhook events yet. Send a test below or trigger from your billing software.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── DELIVERIES ── -->
+    <div id="tab-deliveries" class="view">
+      <div class="table-controls">
+        <button class="filter-btn active" onclick="filterTable('all',this)">All</button>
+        <button class="filter-btn" onclick="filterTable('Branch A',this)">Branch A</button>
+        <button class="filter-btn" onclick="filterTable('Branch B',this)">Branch B</button>
+        <button class="filter-btn" onclick="filterTable('Branch C',this)">Branch C</button>
+        <button class="filter-btn" onclick="filterTable('transit',this)">In Transit</button>
+        <button class="filter-btn" onclick="filterTable('scheduled',this)">Scheduled</button>
+        <button class="filter-btn" onclick="filterTable('delivered',this)">Delivered</button>
+        <button class="btn-add" onclick="openAddModal()">+ Add Delivery</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th><th>Branch</th><th>Customer</th><th>Items</th>
+              <th>Slot</th><th>Status</th><th>Priority</th><th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="delivery-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ── TODO ── -->
+    <div id="tab-todo" class="view">
+      <div class="todo-header">
+        <div>
+          <h2>To-Do Board</h2>
+          <p>Drag cards between columns · Click + to add tasks</p>
+        </div>
+      </div>
+      <div class="todo-board" id="todo-board"></div>
+    </div>
+
+    <!-- ── GPS TRACKING ── -->
+    <div id="tab-webhook" class="view">
+      <div class="map-card">
+        <h3>🛰️ Live GPS Van Tracking</h3>
+        <p>Admin-only realtime tracking for delivery vans. The map uses GPS-style location updates and only appears in the admin panel.</p>
+        <div id="tracking-map"></div>
+        <div class="section-title" style="margin-top:1rem">
+          <span>Tracking refreshes every 4 seconds</span>
+          <small>Van markers move along active delivery routes.</small>
+        </div>
+      </div>
+
+      <div class="map-card">
+        <h3>Current Van Status</h3>
+        <p>View each van's current branch, live coordinates, and route progress.</p>
+        <div class="van-list" id="van-list"></div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /app -->
+
+<!-- ══════════ ADD DELIVERY MODAL ══════════ -->
+<div class="modal-overlay" id="add-modal">
+  <div class="modal">
+    <div class="modal-title">New Delivery</div>
+    <div class="modal-field">
+      <label>Branch</label>
+      <select id="add-branch">
+        <option value="Branch A">Branch A — North</option>
+        <option value="Branch B">Branch B — East</option>
+        <option value="Branch C">Branch C — South</option>
+      </select>
+    </div>
+    <div class="modal-field">
+      <label>Customer Name</label>
+      <input type="text" id="add-name" placeholder="Full name">
+    </div>
+    <div class="modal-field">
+      <label>Address</label>
+      <input type="text" id="add-addr" placeholder="Delivery address">
+    </div>
+    <div class="modal-field">
+      <label>Items</label>
+      <input type="text" id="add-item" placeholder="e.g. King-size bed frame">
+    </div>
+    <div class="modal-field">
+      <label>Time Slot</label>
+      <input type="text" id="add-time" placeholder="e.g. 10:00–12:00">
+    </div>
+    <div class="modal-field">
+      <label>Priority</label>
+      <select id="add-priority">
+        <option value="high">High</option>
+        <option value="med" selected>Medium</option>
+        <option value="low">Low</option>
+      </select>
+    </div>
+    <div class="modal-btns">
+      <button class="btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="btn-save" onclick="saveDelivery()">Add Delivery</button>
+    </div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-o9N1j7kZkdfrV6lMfdWqo3m3iKYz2q2rFQ9QwZ8aE+M=" crossorigin=""></script>
+<!-- ══════════ SCRIPTS ══════════ -->
+<script>
+/* ─── Data ─── */
+const BRANCHES = [
+  { id:'Branch A', label:'Branch A — North', color:'#2a6049', stripe:'#2a6049', badgeCls:'tcb-a' },
+  { id:'Branch B', label:'Branch B — East',  color:'#1a4a7a', stripe:'#1a4a7a', badgeCls:'tcb-b' },
+  { id:'Branch C', label:'Branch C — South', color:'#6b3fa0', stripe:'#6b3fa0', badgeCls:'tcb-c' },
+];
+
+let deliveries = [
+  {id:'D001',branch:'Branch A',name:'Arjun Sharma',  addr:'12 Indiranagar, Bengaluru',  item:'King-size bed frame',        time:'09:00–11:00',status:'delivered',priority:'high'},
+  {id:'D002',branch:'Branch A',name:'Priya Nair',    addr:'34 Koramangala, Bengaluru',  item:'Dining table + 6 chairs',    time:'11:00–13:00',status:'transit',  priority:'high'},
+  {id:'D003',branch:'Branch A',name:'Kavitha Reddy', addr:'78 HSR Layout, Bengaluru',   item:'3-seater sofa',              time:'13:00–15:00',status:'scheduled',priority:'med'},
+  {id:'D004',branch:'Branch A',name:'Rohit Menon',   addr:'5 JP Nagar, Bengaluru',      item:'Wardrobe (5-door)',          time:'15:00–17:00',status:'pending',  priority:'low'},
+  {id:'D005',branch:'Branch B',name:'Suman Rao',     addr:'22 Whitefield, Bengaluru',   item:'Office desk + chair',        time:'09:30–11:30',status:'delivered',priority:'med'},
+  {id:'D006',branch:'Branch B',name:'Deepa Krishnan',addr:'88 Marathahalli, Bengaluru', item:'Bookshelf (tall)',           time:'12:00–14:00',status:'transit',  priority:'high'},
+  {id:'D007',branch:'Branch B',name:'Anil Joshi',    addr:'3 Bellandur, Bengaluru',     item:'TV unit + coffee table',     time:'14:30–16:30',status:'scheduled',priority:'med'},
+  {id:'D008',branch:'Branch B',name:'Meena Iyer',    addr:'67 Sarjapur Rd, Bengaluru',  item:'Queen bed + mattress',      time:'16:30–18:30',status:'pending',  priority:'low'},
+  {id:'D009',branch:'Branch C',name:'Vikram Bhat',   addr:'9 Electronic City, Bengaluru',item:'Sectional sofa',           time:'08:00–10:00',status:'delivered',priority:'high'},
+  {id:'D010',branch:'Branch C',name:'Sunita Pillai', addr:'45 Bannerghatta, Bengaluru', item:'Study table + chair',       time:'10:30–12:30',status:'transit',  priority:'med'},
+  {id:'D011',branch:'Branch C',name:'Harish Gowda',  addr:'14 Jayanagar, Bengaluru',   item:'Chest of drawers',          time:'13:00–15:00',status:'scheduled',priority:'med'},
+  {id:'D012',branch:'Branch C',name:'Lakshmi Das',   addr:'30 BTM Layout, Bengaluru',   item:'Dining set (4-seater)',     time:'15:30–17:30',status:'pending',  priority:'high'},
+];
+
+let todos = [
+  {id:'t1',title:'Confirm D003 delivery window',meta:'Call customer before 11 AM',branch:'Branch A',col:'todo',deliveryId:'D003'},
+  {id:'t2',title:'Schedule extra van for Branch B',meta:'Heavy load — wardrobe delivery',branch:'Branch B',col:'todo'},
+  {id:'t3',title:'Restock packing materials',meta:'At least 20 blankets needed',branch:'Branch C',col:'todo'},
+  {id:'t4',title:'Assign D006 to Driver Rajan',meta:'Whitefield route',branch:'Branch B',col:'inprogress',deliveryId:'D006'},
+  {id:'t5',title:'Update D002 status to delivered',meta:'Mark in system after 2 PM',branch:'Branch A',col:'inprogress',deliveryId:'D002'},
+  {id:'t6',title:'Invoice sent for D001',meta:'Email to arjun.sharma@gmail.com',branch:'Branch A',col:'done',deliveryId:'D001'},
+  {id:'t7',title:'Feedback collected for D009',meta:'5-star from Vikram Bhat',branch:'Branch C',col:'done',deliveryId:'D009'},
+];
+
+const USER_LOGINS = {
+  'Branch A': { username:'north', password:'north123', role:'member' },
+  'Branch B': { username:'east',  password:'east123',  role:'member' },
+  'Admin':    { username:'south', password:'south123', role:'admin'  },
+};
+
+let currentBranch = null, currentRole = null;
+let dragItem = null, todoCounter = 8, dCounter = 13;
+let webhookEvents = [];
+let currentFilter = 'all';
+const TRACKING_API_URL = '/api/tracking';
+
+/* ─── Auth ─── */
+function handleLogin(){
+  const branch = document.getElementById('login-branch').value;
+  const user   = document.getElementById('login-user').value.trim();
+  const pass   = document.getElementById('login-pass').value.trim();
+  const errEl  = document.getElementById('login-error');
+  const auth   = USER_LOGINS[branch];
+  if(!user || !pass){ errEl.textContent = 'Please fill in all fields.'; return; }
+  if(auth.username === user && auth.password === pass){
+    errEl.textContent = '';
+    currentRole   = auth.role;
+    currentBranch = auth.role === 'admin' ? 'ALL' : branch;
+    document.getElementById('branch-pill').textContent = auth.role === 'admin' ? '🔑 Admin' : branch;
+    document.getElementById('login-view').style.display = 'none';
+    document.getElementById('app-view').classList.add('active');
+    setDate();
+    updateMetrics();
+    renderBranches();
+    renderDeliveriesTable(currentFilter);
+    renderTodoBoard();
+    updateViewAccess();
+    if(currentRole === 'admin') initTrackingMap();
+  } else {
+    errEl.textContent = 'Incorrect username or password.';
+  }
+}
+
+document.getElementById('login-pass').addEventListener('keydown', e => { if(e.key==='Enter') handleLogin(); });
+document.getElementById('login-user').addEventListener('keydown', e => { if(e.key==='Enter') handleLogin(); });
+
+function logout(){
+  currentBranch = null; currentRole = null;
+  document.getElementById('login-view').style.display = 'flex';
+  document.getElementById('app-view').classList.remove('active');
+  document.getElementById('login-user').value = '';
+  document.getElementById('login-pass').value = '';
+  document.getElementById('login-error').textContent = '';
+}
+
+/* ─── Date ─── */
+function setDate(){
+  const d = new Date();
+  const s = d.toLocaleDateString('en-IN',{weekday:'short',day:'numeric',month:'short',year:'numeric'});
+  document.getElementById('top-date').textContent = s;
+  document.getElementById('live-label').textContent = 'Live · ' + d.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
+}
+setInterval(setDate, 30000);
+
+/* ─── Tab switching ─── */
+function switchTab(tab, btn){
+  if(tab === 'webhook' && currentRole !== 'admin') return;
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+  if(btn) btn.classList.add('active');
+  if(tab === 'deliveries') renderDeliveriesTable(currentFilter);
+  if(tab === 'todo') renderTodoBoard();
+}
+
+function updateViewAccess(){
+  const trackingBtn = document.getElementById('nav-tracking-btn');
+  if(currentRole === 'admin'){
+    trackingBtn.style.display = 'inline-flex';
+  } else {
+    trackingBtn.style.display = 'none';
+    const dashboardBtn = document.querySelector('.nav-btn');
+    if(dashboardBtn){
+      document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+      dashboardBtn.classList.add('active');
+      document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+      document.getElementById('tab-dashboard').classList.add('active');
+    }
+  }
+}
+
+/* ─── Metrics ─── */
+function getAccessibleDeliveries(){
+  return currentRole === 'admin' ? deliveries : deliveries.filter(d => d.branch === currentBranch);
+}
+
+function animateMetric(id, val){
+  const el = document.getElementById(id);
+  const old = parseInt(el.textContent) || 0;
+  if(old !== val){
+    el.textContent = val;
+    el.classList.remove('flash');
+    void el.offsetWidth;
+    el.classList.add('flash');
+  }
+}
+
+function updateMetrics(){
+  const ad = getAccessibleDeliveries();
+  animateMetric('m-total',   ad.length);
+  animateMetric('m-transit', ad.filter(d=>d.status==='transit').length);
+  animateMetric('m-done',    ad.filter(d=>d.status==='delivered').length);
+  animateMetric('m-pending', ad.filter(d=>d.status==='pending'||d.status==='scheduled').length);
+  const openTodos = todos.filter(t => t.col!=='done' && (currentRole==='admin' || t.branch===currentBranch)).length;
+  animateMetric('m-todos', openTodos);
+  document.getElementById('m-branch-tag').textContent =
+    currentRole === 'admin' ? 'Across 3 branches' : currentBranch;
+}
+
+let trackingMap = null;
+let trackingPoller = null;
+const trackingMarkers = new Map();
+
+function initTrackingMap(){
+  if(trackingMap) return;
+  const mapEl = document.getElementById('tracking-map');
+  if(!mapEl) return;
+  trackingMap = L.map('tracking-map', { scrollWheelZoom: false }).setView([12.9716, 77.5946], 11);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap contributors',
+    maxZoom: 18,
+  }).addTo(trackingMap);
+
+  fetchTrackingData();
+  trackingPoller = setInterval(fetchTrackingData, 4000);
+  setTimeout(() => trackingMap.invalidateSize(), 200);
+}
+
+function fetchTrackingData(){
+  fetch(TRACKING_API_URL)
+    .then(res => res.ok ? res.json() : Promise.reject(res.statusText))
+    .then(data => {
+      if(!data || !Array.isArray(data.vans)) return;
+      data.vans.forEach(v => {
+        const coords = v.coords || [12.9716, 77.5946];
+        if(trackingMarkers.has(v.id)){
+          const marker = trackingMarkers.get(v.id);
+          marker.setLatLng(coords);
+          marker.setPopupContent(`${v.id} · ${v.branch} · ${v.status}`);
+        } else {
+          const marker = L.circleMarker(coords, {
+            radius: 8,
+            color: v.color,
+            fillColor: v.color,
+            fillOpacity: 0.9,
+            weight: 2,
+          }).addTo(trackingMap).bindPopup(`${v.id} · ${v.branch} · ${v.status}`);
+          trackingMarkers.set(v.id, marker);
+        }
+      });
+      renderVanList(data.vans);
+    })
+    .catch(() => {
+      document.getElementById('van-list').innerHTML = '<div class="van-card">Unable to connect to tracking server.</div>';
+    });
+}
+
+function renderVanList(vans){
+  const list = document.getElementById('van-list');
+  if(!list) return;
+  list.innerHTML = vans.map(v => {
+    const [lat, lng] = v.coords || [0, 0];
+    return `
+      <div class="van-card">
+        <div class="van-details">
+          <div class="van-label">${v.id} — ${v.branch}</div>
+          <div class="van-status">${v.status} · ${lat.toFixed(5)}, ${lng.toFixed(5)}</div>
+        </div>
+        <span class="van-badge">${v.status}</span>
+      </div>`;
+  }).join('');
+}
+
+/* ─── Branch panels ─── */
+function statusClass(s){ return 'sp-'+s; }
+function priorityClass(p){ return 'pr-'+p; }
+const statusLabel = { delivered:'Delivered', transit:'In Transit', scheduled:'Scheduled', pending:'Pending' };
+
+function renderBranches(){
+  const grid = document.getElementById('branch-grid');
+  grid.innerHTML = '';
+  const vis = currentRole==='admin' ? BRANCHES : BRANCHES.filter(b=>b.id===currentBranch);
+  vis.forEach(b => {
+    const bds = deliveries.filter(d=>d.branch===b.id);
+    const card = document.createElement('div');
+    card.className = 'branch-card';
+    card.id = 'bcard-' + b.id.replace(' ','');
+
+    const items = bds.map(d=>`
+      <div class="d-row${d._new?' new-row':''}" id="drow-${d.id}" onclick="openDeliveryDetail('${d.id}')">
+        <div class="d-id">${d.id}</div>
+        <div class="d-body">
+          <div class="d-name">${d.name}</div>
+          <div class="d-item">${d.item}</div>
+          <div class="d-addr">${d.addr}</div>
+        </div>
+        <div class="d-right">
+          <span class="status-pill ${statusClass(d.status)}" id="spill-${d.id}">${statusLabel[d.status]}</span>
+          <span class="d-time">${d.time}</span>
+          <div class="priority-dot ${priorityClass(d.priority)}"></div>
+        </div>
+      </div>
+    `).join('');
+
+    const done  = bds.filter(d=>d.status==='delivered').length;
+    const total = bds.length;
+    card.innerHTML = `
+      <div class="branch-head">
+        <div class="branch-stripe" style="background:${b.color}"></div>
+        <div>
+          <div class="branch-title">${b.label}</div>
+          <div class="branch-sub">Bengaluru</div>
+        </div>
+        <span class="branch-badge" style="background:${b.color}18;color:${b.color}">${done}/${total} done</span>
+      </div>
+      <div class="delivery-list">${items}</div>
+    `;
+    grid.appendChild(card);
+    bds.forEach(d => d._new = false);
+  });
+}
+
+function openDeliveryDetail(id){
+  const d = deliveries.find(x=>x.id===id);
+  if(d){
+    showToast('info', '📦 ' + d.id + ' — ' + d.name, d.item + ' · ' + d.time);
+  }
+}
+
+/* ─── Deliveries Table ─── */
+function renderDeliveriesTable(filter){
+  currentFilter = filter;
+  const accessible = getAccessibleDeliveries();
+  let filtered = [...accessible];
+  if(filter==='transit')   filtered = accessible.filter(d=>d.status==='transit');
+  else if(filter==='scheduled') filtered = accessible.filter(d=>d.status==='scheduled');
+  else if(filter==='delivered') filtered = accessible.filter(d=>d.status==='delivered');
+  else if(filter!=='all')  filtered = currentRole==='admin' ? deliveries.filter(d=>d.branch===filter) : accessible;
+
+  const tbody = document.getElementById('delivery-tbody');
+  tbody.innerHTML = filtered.map(d => {
+    const b = BRANCHES.find(x=>x.id===d.branch)||BRANCHES[0];
+    return `<tr id="tr-${d.id}"${d._newRow?' class="new-tr"':''}>
+      <td><span style="font-family:'DM Mono',monospace;font-size:11px;color:var(--text3)">${d.id}</span></td>
+      <td><span style="background:${b.color}18;color:${b.color};font-size:11px;font-weight:600;padding:2px 8px;border-radius:99px">${d.branch}</span></td>
+      <td style="font-weight:500">${d.name}</td>
+      <td class="muted">${d.item}</td>
+      <td class="muted" style="font-family:'DM Mono',monospace;font-size:12px">${d.time}</td>
+      <td><span class="status-pill ${statusClass(d.status)}" id="tspill-${d.id}">${statusLabel[d.status]}</span></td>
+      <td><div class="priority-dot ${priorityClass(d.priority)}" style="margin:0"></div></td>
+      <td>
+        <div style="display:flex;gap:6px;align-items:center">
+          <button class="mark-btn" onclick="changeStatusById('${d.id}','delivered')">✔ Delivered</button>
+          <select class="action-select" onchange="changeStatusById('${d.id}',this.value)">
+            <option value="scheduled" ${d.status==='scheduled'?'selected':''}>Scheduled</option>
+            <option value="transit"   ${d.status==='transit'?'selected':''}>In Transit</option>
+            <option value="delivered" ${d.status==='delivered'?'selected':''}>Delivered</option>
+            <option value="pending"   ${d.status==='pending'?'selected':''}>Pending</option>
+          </select>
+        </div>
+      </td>
+    </tr>`;
+  }).join('');
+  filtered.forEach(d => d._newRow = false);
+}
+
+function filterTable(f, btn){
+  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderDeliveriesTable(f);
+}
+
+function changeStatusById(id, status){
+  const d = deliveries.find(x=>x.id===id);
+  if(!d) return;
+  d.status = status;
+  updateMetrics();
+  renderBranches();
+  renderDeliveriesTable(currentFilter);
+}
+
+/* ─── Add Delivery Modal ─── */
+function openAddModal(){ document.getElementById('add-modal').classList.add('open'); }
+function closeModal(){ document.getElementById('add-modal').classList.remove('open'); }
+
+function saveDelivery(){
+  const branch = document.getElementById('add-branch').value;
+  const name   = document.getElementById('add-name').value.trim();
+  const addr   = document.getElementById('add-addr').value.trim();
+  const item   = document.getElementById('add-item').value.trim();
+  const time   = document.getElementById('add-time').value.trim();
+  const priority = document.getElementById('add-priority').value;
+  if(!name || !addr || !item){ alert('Please fill in Name, Address and Items.'); return; }
+  const id = 'D' + String(dCounter++).padStart(3,'0');
+  deliveries.push({ id, branch, name, addr, item, time: time||'TBD', status:'scheduled', priority, _new: true, _newRow: true });
+  closeModal();
+  updateMetrics();
+  renderBranches();
+  renderDeliveriesTable(currentFilter);
+  showToast('new-delivery', '📦 New delivery added', id + ' — ' + name + ' [' + branch + ']');
+  addWebhookLog('new', 'Manual: delivery.created', `${id} · ${name} · ${branch}`);
+  ['add-name','add-addr','add-item','add-time'].forEach(fid => document.getElementById(fid).value = '');
+}
+
+/* ─── Todo Board ─── */
+function renderTodoBoard(){
+  const board = document.getElementById('todo-board');
+  board.innerHTML = '';
+  const cols = [
+    { id:'todo',       label:'To Do',       dot:'#f59e0b', cls:'tcb-a' },
+    { id:'inprogress', label:'In Progress',  dot:'#1a4a7a', cls:'tcb-b' },
+    { id:'done',       label:'Done',         dot:'#2a6049', cls:'tcb-c' },
+  ];
+  cols.forEach(col => {
+    const colTodos = todos.filter(t=>t.col===col.id);
+    const colEl = document.createElement('div');
+    colEl.className = 'todo-col';
+    colEl.dataset.col = col.id;
+    colEl.addEventListener('dragover', e => { e.preventDefault(); colEl.classList.add('drag-over'); });
+    colEl.addEventListener('dragleave', () => colEl.classList.remove('drag-over'));
+    colEl.addEventListener('drop', e => {
+      e.preventDefault();
+      colEl.classList.remove('drag-over');
+      if(dragItem){ const t = todos.find(t=>t.id===dragItem); if(t){ t.col=col.id; renderTodoBoard(); updateMetrics(); } }
+    });
+
+    let html = `<div class="tc-head">
+      <div class="tc-dot" style="background:${col.dot}"></div>
+      <span class="tc-title">${col.label}</span>
+      <span class="tc-count">${colTodos.length}</span>
+    </div>`;
+    colEl.innerHTML = html;
+
+    colTodos.forEach(t => {
+      const b = BRANCHES.find(x=>x.id===t.branch)||BRANCHES[0];
+      const card = document.createElement('div');
+      card.className = 'todo-card' + (t.col==='done'?' todo-card-done':'');
+      card.draggable = true;
+      card.dataset.id = t.id;
+      card.addEventListener('dragstart', () => { dragItem=t.id; card.classList.add('dragging'); });
+      card.addEventListener('dragend',   () => { card.classList.remove('dragging'); dragItem=null; });
+      card.innerHTML = `
+        <div class="tc-row">
+          <div class="check-box ${t.col==='done'?'checked':''}" onclick="toggleDone('${t.id}')">
+            ${t.col==='done'?`<svg width="9" height="9" viewBox="0 0 9 9"><path d="M1.5 4.5l2 2L7.5 2" stroke="#fff" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>`:''}
+          </div>
+          <div style="flex:1;min-width:0">
+            <div class="tc-title-text ${t.col==='done'?'done':''}">${t.title}</div>
+            <div class="tc-meta">${t.meta}</div>
+            <span class="tc-branch ${b.badgeCls}">${t.branch}</span>
+          </div>
+        </div>`;
+      colEl.appendChild(card);
+    });
+
+    const addBtn = document.createElement('button');
+    addBtn.className = 'add-task-btn';
+    addBtn.innerHTML = '+ Add task';
+    addBtn.onclick = () => showAddTaskForm(colEl, col.id);
+    colEl.appendChild(addBtn);
+    board.appendChild(colEl);
+  });
+}
+
+function toggleDone(id){
+  const t = todos.find(x=>x.id===id);
+  if(t){ t.col = t.col==='done' ? 'todo' : 'done'; renderTodoBoard(); updateMetrics(); }
+}
+
+function showAddTaskForm(colEl, colId){
+  if(colEl.querySelector('.add-task-form')) return;
+  const form = document.createElement('div');
+  form.className = 'add-task-form';
+  form.style.cssText = 'background:var(--white);border:1px solid var(--border);border-radius:8px;padding:.65rem .75rem;margin-top:4px';
+  form.innerHTML = `
+    <input id="nt-title" placeholder="Task title" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:6px 8px;font-size:12px;font-family:'Outfit',sans-serif;margin-bottom:5px;outline:none;background:var(--bg)">
+    <input id="nt-meta"  placeholder="Details (optional)" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:6px 8px;font-size:12px;font-family:'Outfit',sans-serif;margin-bottom:5px;outline:none;background:var(--bg)">
+    <select id="nt-branch" style="width:100%;border:1.5px solid var(--border);border-radius:6px;padding:6px 8px;font-size:12px;font-family:'Outfit',sans-serif;margin-bottom:6px;background:var(--bg)">
+      <option value="Branch A">Branch A</option>
+      <option value="Branch B">Branch B</option>
+      <option value="Branch C">Branch C</option>
+    </select>
+    <div style="display:flex;gap:5px;justify-content:flex-end">
+      <button onclick="this.closest('.add-task-form').remove()" style="border:1px solid var(--border);border-radius:6px;padding:4px 10px;font-size:11px;font-family:'Outfit',sans-serif;background:none;cursor:pointer;color:var(--text2)">Cancel</button>
+      <button onclick="addTask('${colId}')" style="border:none;border-radius:6px;padding:4px 10px;font-size:11px;font-weight:600;font-family:'Outfit',sans-serif;background:var(--accent);color:#fff;cursor:pointer">Add</button>
+    </div>`;
+  colEl.appendChild(form);
+  form.querySelector('#nt-title').focus();
+}
+
+function addTask(colId){
+  const title  = document.getElementById('nt-title').value.trim();
+  const meta   = document.getElementById('nt-meta').value.trim();
+  const branch = document.getElementById('nt-branch').value;
+  if(!title) return;
+  todos.push({ id:'t'+(todoCounter++), title, meta: meta||'No details', branch, col: colId });
+  renderTodoBoard(); updateMetrics();
+}
+
+/* ─── Webhook simulation ─── */
+const sampleNames  = ['Ravi Kumar','Anjali Singh','Suresh Iyer','Pooja Nair','Kiran Bhat','Neha Rao','Aryan Shah','Divya Pillai'];
+const sampleItems  = ['L-shaped sofa','King bed frame','5-door wardrobe','Dining set 6-seater','TV unit + shelves','Study table + bookshelf','Recliner chair','Corner desk'];
+const sampleAddrs  = ['32 Sadashivanagar','11 Banashankari','88 Bellandur','4 Electronic City Phase 2','19 Yelahanka New Town','53 Hennur Road'];
+const sampleSlots  = ['08:00–10:00','10:00–12:00','12:00–14:00','14:00–16:00','16:00–18:00'];
+
+function simulateWebhook(type){
+  const now = new Date();
+  if(type === 'new_delivery'){
+    const branch = BRANCHES[Math.floor(Math.random()*BRANCHES.length)].id;
+    const name   = sampleNames[Math.floor(Math.random()*sampleNames.length)];
+    const item   = sampleItems[Math.floor(Math.random()*sampleItems.length)];
+    const addr   = sampleAddrs[Math.floor(Math.random()*sampleAddrs.length)] + ', Bengaluru';
+    const slot   = sampleSlots[Math.floor(Math.random()*sampleSlots.length)];
+    const id     = 'D' + String(dCounter++).padStart(3,'0');
+    const priorities = ['high','med','med','low'];
+    const priority = priorities[Math.floor(Math.random()*priorities.length)];
+    deliveries.push({ id, branch, name, addr, item, time: slot, status:'scheduled', priority, _new: true, _newRow: true });
+    updateMetrics();
+    renderBranches();
+    renderDeliveriesTable(currentFilter);
+    showToast('new-delivery', '📦 Billing: New delivery order', id + ' — ' + name);
+    addWebhookLog('new', 'delivery.created', `${id} · ${name} · ${item} · ${branch}`);
+    highlightBranchCard(branch);
+  } else {
+    // Status update — pick a non-delivered delivery at random
+    const candidates = deliveries.filter(d => d.status !== 'delivered');
+    if(!candidates.length){ showToast('status-update', '⚠️ No deliveries to update', 'All deliveries are already delivered'); return; }
+    const d = candidates[Math.floor(Math.random()*candidates.length)];
+    const oldStatus = d.status;
+    if(type==='status_transit')    d.status = 'transit';
+    else if(type==='status_delivered') d.status = 'delivered';
+    else if(type==='status_scheduled') d.status = 'scheduled';
+    updateMetrics();
+    renderBranches();
+    renderDeliveriesTable(currentFilter);
+    showToast('status-update', '🔄 Billing: Status updated', `${d.id} · ${d.name} → ${statusLabel[d.status]}`);
+    addWebhookLog('status', 'delivery.status_updated', `${d.id} · ${oldStatus} → ${d.status}`);
+    flashStatusPill(d.id);
+  }
+}
+
+function highlightBranchCard(branch){
+  const id = 'bcard-' + branch.replace(' ','');
+  const el = document.getElementById(id);
+  if(el){ el.classList.remove('highlight'); void el.offsetWidth; el.classList.add('highlight'); }
+}
+
+function flashStatusPill(id){
+  ['spill-','tspill-'].forEach(prefix => {
+    const el = document.getElementById(prefix+id);
+    if(el){ el.classList.remove('status-update-anim'); void el.offsetWidth; el.classList.add('status-update-anim'); }
+  });
+}
+
+/* ─── Webhook log ─── */
+function addWebhookLog(type, event, detail){
+  const now = new Date();
+  const timeStr = now.toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  const entry = { type, event, detail, time: timeStr };
+  webhookEvents.unshift(entry);
+  const typeLabel = { new:'NEW', status:'STATUS', error:'ERROR' }[type] || 'EVENT';
+  const typeCls   = { new:'lt-new', status:'lt-status', error:'lt-error' }[type] || 'lt-new';
+  const rowHtml = `
+    <div class="log-row">
+      <span class="log-type ${typeCls}">${typeLabel}</span>
+      <div class="log-body">
+        <div class="log-msg">${event}</div>
+        <div class="log-detail">${detail}</div>
+      </div>
+      <div class="log-time">${timeStr}</div>
+    </div>`;
+  ['wh-log-dashboard','wh-log-full'].forEach(logId => {
+    const logEl = document.getElementById(logId);
+    const emptyEl = logEl.querySelector('.log-empty');
+    if(emptyEl) emptyEl.remove();
+    logEl.insertAdjacentHTML('afterbegin', rowHtml);
+    // trim to 50 entries
+    const rows = logEl.querySelectorAll('.log-row');
+    if(rows.length > 50) rows[rows.length-1].remove();
+  });
+  document.getElementById('log-count').textContent = webhookEvents.length + ' event' + (webhookEvents.length!==1?'s':'');
+}
+
+/* ─── Toast ─── */
+function showToast(type, title, desc){
+  const container = document.getElementById('toast-container');
+  const toast = document.createElement('div');
+  toast.className = 'toast ' + type;
+  toast.innerHTML = `
+    <div class="toast-body">
+      <div class="toast-title">${title}</div>
+      ${desc ? `<div class="toast-desc">${desc}</div>` : ''}
+    </div>`;
+  container.appendChild(toast);
+  setTimeout(() => {
+    toast.style.animation = 'slideOut .25s ease forwards';
+    setTimeout(() => toast.remove(), 260);
+  }, 4000);
+}
+
+/* ─── Copy helpers ─── */
+function copyWebhookUrl(){
+  copyText('https://woodcraft.local/api/webhook/billing');
+  document.getElementById('copy-btn-main').textContent = 'Copied!';
+  setTimeout(() => { document.getElementById('copy-btn-main').textContent = 'Copy'; }, 2000);
+}
+function copyText(text){
+  navigator.clipboard.writeText(text).catch(() => {
+    const el = document.createElement('textarea');
+    el.value = text; document.body.appendChild(el); el.select(); document.execCommand('copy'); el.remove();
+  });
+}
+
+/* ─── Simulate incoming billing webhooks periodically (demo) ─── */
+let demoTimer = null;
+function startDemoWebhooks(){
+  if(demoTimer) return;
+  // Fires a random status update every 25 seconds to demonstrate live updates
+  demoTimer = setInterval(() => {
+    if(!currentBranch) { clearInterval(demoTimer); demoTimer=null; return; }
+    const types = ['status_transit','status_delivered','status_scheduled'];
+    simulateWebhook(types[Math.floor(Math.random()*types.length)]);
+  }, 25000);
+}
+// Start demo webhooks after login
+document.getElementById('login-view').addEventListener('click', () => {
+  setTimeout(startDemoWebhooks, 1000);
+});
+
+/* ─── Init ─── */
+setDate();
+</script>
+</body>
+</html>
